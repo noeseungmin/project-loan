@@ -106,7 +106,7 @@ class CounselServiceTest {
         assertThat(actual.getCounselId()).isSameAs(findId);
         assertThat(actual.getName()).isSameAs(request.getName());
     }
-
+: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
     @Test
     void delete(){
         Long targetId = 1L;
