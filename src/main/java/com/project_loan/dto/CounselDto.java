@@ -41,6 +41,5 @@ public class CounselDto {
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
-
     }
 }
