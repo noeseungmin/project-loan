@@ -2,44 +2,45 @@ package com.project_loan.dto;
 
 import lombok.*;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
-public class CounselDto {
+public class ApplicationDto implements Serializable {
 
     @NoArgsConstructor
     @AllArgsConstructor
     @Getter
     @Builder
     public static class Request{
-
         private String name;
         private String cellPhone;
         private String email;
-        private String memo;
-        private String address;
-        private String addressDetail;
-        private String zipCode;
-
+        private BigDecimal hopeAmount;
     }
 
     @NoArgsConstructor
     @AllArgsConstructor
-    @Builder
-    @Setter
     @Getter
+    @Setter
+    @Builder
     public static class Response{
-
-        private Long counselId;
+        private Long applicationId;
         private String name;
         private String cellPhone;
         private String email;
-        private String memo;
-        private String address;
-        private String addressDetail;
-        private String zipCode;
+        private BigDecimal hopeAmount;
         private LocalDateTime appliedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
-
+    }
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Getter
+    @Setter
+    @Builder
+    public static class AcceptTerms{
+      List<Long> acceptTermsIds;
     }
 }

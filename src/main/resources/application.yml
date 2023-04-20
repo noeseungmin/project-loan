@@ -14,8 +14,11 @@ spring:
     properties:
       hibernate:
         format_sql: true
-
-
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+      location: /workspace/project_loan/file
 logging:
   level:
     org.hibernate.SQL: debug
