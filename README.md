@@ -131,6 +131,116 @@
 <img width="80%" src="https://github.com/noeseungmin/project-loan/assets/106221717/8e9956c4-8ea7-4936-a10d-2b3f4057065e"/>
 
 ## <div id="핵심">핵심 기능</div>
+### API 공통 응답 포맷
+```java
+public enum ResultType {
+
+    SUCCESS("0000", "success"),
+    NOT_EXIST("4001", "file not exist"),
+    SYSTEM_ERROR("9000", "system error");
+
+    private final String code;
+    private final String desc;
+}
+```
+
+```java
+public class BaseException extends RuntimeException {
+
+    private String code = "";
+    private String desc = "";
+    private String extraMessage = "";
+
+    public BaseException(ResultType resultType) {
+        super(resultType.getDesc());
+        this.code = resultType.getCode();
+        this.desc = resultType.getDesc();
+    }
+}
+```
+* 공통 에러 데이터를 담을 사용자 정의 예외 클래스 생성
+
+```java
+public class ResultObject implements Serializable {
+
+    public String code;
+    public String desc;
+
+    public ResultObject(ResultType resultType) {
+        this.code = resultType.getCode();
+        this.desc = resultType.getDesc();
+    }
+
+    public ResultObject(BaseException e) {
+        this.code = e.getCode();
+        this.desc = e.getDesc();
+    }
+
+    public static ResultObject getSuccess() {
+
+        return new ResultObject(ResultType.SUCCESS);
+    }
+}
+```
+* 공통 응답 값에 사용될 resultObject 클래스 생성
+
+```java
+public class ResponseDto<T> implements Serializable {
+
+    private ResultObject result;
+    private T data;
+
+    public ResponseDto(ResultObject result) {
+        this.result = result;
+    }
+
+    public ResponseDto(T data) {
+        this.data = data;
+    }
+
+    public static <T> ResponseDto<T> ok() {
+
+        return new ResponseDto<>(ResultObject.getSuccess());
+    }
+
+    public static <T> ResponseDto<T> ok(T data) {
+        return new ResponseDto<>(ResultObject.getSuccess(), data);
+    }
+
+    public static <T> ResponseDto<T> response(T data) {
+        return new ResponseDto<>(ResultObject.getSuccess(), data);
+    }
+
+    public ResponseDto(BaseException ex) {
+        this.result = new ResultObject(ex);
+    }
+}
+```
+
+```java
+public abstract class AbstractController {
+
+    protected <T> ResponseDto<T> ok(){
+        return ok(null, ResultObject.getSuccess());
+    }
+
+    protected <T> ResponseDto<T> ok(T data) {
+        return ok(data, ResultObject.getSuccess());
+    }
+
+    protected <T> ResponseDto<T> ok(T data, ResultObject result) {
+        ResponseDto<T> obj = new ResponseDto<>();
+        obj.setResult(result);
+        obj.setData(data);
+
+        return obj;
+    }
+}
+```
+* 요청에 대한 응답값을 통일화 하기 위한 추상클래스
+
+
+
 
 ## <div id="고찰">고찰</div>
 
