@@ -1,4 +1,7 @@
 # 대출 서비스 프로젝트
+## 소개
+금융이란 ? 자본에 이자를 붙혀 돈이 필요한 곳에 자본을 빌려주는 행위로 우리가 아는 금융은 대부분 대출이다.
+금융의 본질이자 많은 부분을 차지하고 있는 대출 도메인을 개발자 관점에서 알아보기 위해 프로젝트를 실시
 
 ## 목차
 - [개발 환경](#환경)
@@ -11,7 +14,7 @@
 - [API](#API)
 - [실행화면](#실행)
 - [핵심기능](#핵심)
-
+- [개발 후기](#후기)
 ## <div id="환경">개발 환경</div>
 
 * Intellij IDEA Ultimate 2022.2.2
@@ -239,10 +242,119 @@ public abstract class AbstractController {
 ```
 * 요청에 대한 응답값을 통일화 하기 위한 추상클래스
 
+### 한도 부여
+```java
+public GrantAmount grant(Long judgmentId) {
+        Judgment judgment = judgmentRepository.findById(judgmentId).orElseThrow(() -> {
+            throw new BaseException(ResultType.SYSTEM_ERROR);
+        });
 
+        Long applicationId = judgment.getApplicationId();
+        Application application = applicationRepository.findById(applicationId).orElseThrow(() -> {
+            throw new BaseException(ResultType.SYSTEM_ERROR);
+        });
 
+        BigDecimal approvalAmount = judgment.getApprovalAmount();
+        application.setApprovalAmount(approvalAmount);
 
-## <div id="고찰">고찰</div>
+        applicationRepository.save(application);
+        return modelMapper.map(application, GrantAmount.class);
+    }
+```
+* 심사정보 확인
+* 심사된 정보 신청정보에 반영
 
+### 대출 계약
+```java
+ public Response contract(Long applicationId) {
+        Application application = applicationRepository.findById(applicationId).orElseThrow(() -> {
+            throw new BaseException(ResultType.SYSTEM_ERROR);
+        });
 
+        judgmentRepository.findByApplicationId(applicationId).orElseThrow(() -> {
+           throw new BaseException(ResultType.SYSTEM_ERROR);
+        });
 
+        if (application.getApprovalAmount() == null
+                || application.getApprovalAmount().compareTo(BigDecimal.ZERO) == 0){
+            throw new BaseException(ResultType.SYSTEM_ERROR);
+        }
+
+        application.setContractedAt(LocalDateTime.now());
+        applicationRepository.save(application);
+        return null;
+    }
+```
+* 신청 정보 존재 확인
+* 심사 정보 존재 확인
+* 승인금액 > 0
+* 계약 체결
+
+### 대출 상환
+```java
+public Response create(Long applicationId, Request request) {
+
+        if (!isRepayableApplication(applicationId)){
+            throw new BaseException(ResultType.SYSTEM_ERROR);
+        }
+
+        Repayment repayment = modelMapper.map(request, Repayment.class);
+        repayment.setApplicationId(applicationId);
+
+        repaymentRepository.save(repayment);
+
+        BalanceDto.Response updatedBalance = balanceService.repaymentUpdate(applicationId,
+                RepaymentRequest.builder()
+                        .repaymentAmount(request.getRepaymentAmount())
+                        .type(RepaymentType.REMOVE)
+                        .build());
+
+        Response response = modelMapper.map(repayment, Response.class);
+        response.setBalance(updatedBalance.getBalance());
+        return response;
+    }
+```
+* 대출 상환시 잔여 대출금액에 반영될 수 있게 RepaymentUpdate
+* 잔고(balance) : 500 -> 100 = 400
+
+```java
+//BalanceDto
+   public static class RepaymentRequest{
+        public enum RepaymentType{
+            ADD,
+            REMOVE
+        }
+
+        private RepaymentType type;
+        private BigDecimal repaymentAmount;
+    }
+```
+
+```java
+ @Override
+    public Response repaymentUpdate(Long applicationId, BalanceDto.RepaymentRequest request) {
+
+        Balance balance = balanceRepository.findByApplicationId(applicationId).orElseThrow(() -> {
+            throw new BaseException(ResultType.SYSTEM_ERROR);
+        });
+
+        BigDecimal updatedBalance = balance.getBalance();
+        BigDecimal repaymentAmount = request.getRepaymentAmount();
+
+        if(request.getType().equals(BalanceDto.RepaymentRequest.RepaymentType.ADD)){
+            updatedBalance = updatedBalance.add(repaymentAmount);
+        }else {
+            updatedBalance = updatedBalance.subtract(repaymentAmount);
+        }
+
+        balance.setBalance(updatedBalance);
+        Balance updated = balanceRepository.save(balance);
+
+        return modelMapper.map(updated, Response.class);
+    }
+```
+* RepaymentType.REMOVE 상환 : balance - repaymentAmount
+* RepaymentType.ADD 상환금 롤백 : balance + repaymentAmount
+
+## <div id="후기">개발 후기</div>
+프로젝트를 진행하며 기록을 하는 일이 쉽지 않았다. 만들면서 오류가 생기고 그것을 고치는 것에 급급하고 추후 기록하려 했지만 또 다른 문제가 생기고 상대적으로 급하지 않다고 느껴진 기록은 우선순위에서 밀려나갔다. 프로젝트를 마치고 프로젝트에 대한 기록이 없어 문서화를 위해 시간이 많이 걸렸다. 내가 무엇을 만들고 있는지 왜 만들고 있는지에 대해 이해하고 기록을 통해 효율적이고 제대로 된 문서화 방법을 찾아 다음에는 꼭 적용해 보고 싶다.
